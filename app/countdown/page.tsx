@@ -9,7 +9,6 @@ import {
   startTimer,
 } from "@/lib/timerSlice";
 import { useRouter } from "next/navigation";
-// import { useRouter } from "next/router";
 
 const CountDownPage = () => {
   const [inputMinutes, setInputMinutes] = useState<number>(1);
@@ -21,19 +20,18 @@ const CountDownPage = () => {
   );
 
   const handleSetTime = () => {
-    dispatch(setTime(inputMinutes * 60)); // Convert to seconds
+    dispatch(setTime(inputMinutes * 60)); // Konversi ke detik
   };
 
   const handleStart = () => {
     dispatch(startTimer());
-    // router.push("/live-timer"); // Navigate to timer page
   };
 
   const handleReset = () => {
     dispatch(resetTimer());
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     setInputMinutes(Number(e.target.value));
   };
 
@@ -45,20 +43,19 @@ const CountDownPage = () => {
       }, 1000);
     }
 
-    return () => clearInterval(interval); // Clear interval on unmount
+    return () => clearInterval(interval); // Membersihkan interval saat komponen unmount
   }, [isActive, timeLeft, dispatch]);
 
   const getTimerStyle = () => {
     if (timeLeft === 0) {
-      return { color: "white" }; // Change color to white when timeLeft is 0
+      return { color: "white" }; // Ubah warna menjadi putih ketika timeLeft = 0
     }
     if (timeLeft <= 5) {
-      return { color: "red" }; // Change color to red if timeLeft <= 5 seconds
+      return { color: "red" }; // Ubah warna menjadi merah jika timeLeft <= 5 detik
     }
-    return { color: "white" }; // Default color
+    return { color: "white" }; // Warna default
   };
 
-  // Format time as mm:ss
   const formatTime = (): string => {
     const minutes = Math.floor(timeLeft / 60);
     const seconds = timeLeft % 60;
@@ -80,16 +77,19 @@ const CountDownPage = () => {
 
       <div className="flex flex-col gap-2 mb-4 mt-6">
         <label htmlFor="minutesInput">Set Minutes: </label>
-        <input
+        <select
           id="minutesInput"
-          type="number"
           value={inputMinutes}
           onChange={handleInputChange}
-          min="0"
           disabled={isActive}
-          style={{ marginRight: "1rem" }}
           className="border-2 border-slate-700 rounded-md p-2 text-slate-800 w-full"
-        />
+        >
+          <option value={1}>1 Minute</option>
+          <option value={2}>2 Minutes</option>
+          <option value={3}>3 Minutes</option>
+          <option value={4}>4 Minutes</option>
+          <option value={5}>5 Minutes</option>
+        </select>
       </div>
 
       <div className="flex flex-col gap-2">
