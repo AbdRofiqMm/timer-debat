@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { RootState } from "@/lib/store";
 import {
@@ -8,54 +8,71 @@ import {
   setTime,
   startTimer,
 } from "@/lib/timerSlice";
-import { useRouter } from "next/navigation";
 
 const CountDownPage = () => {
-  const [inputMinutes, setInputMinutes] = useState<number>(1);
+  const [inputMinutes, setInputMinutes] = useState<number>(1); // Default select is 1 minute
+  const [hasMounted, setHasMounted] = useState(false); // Track if component has mounted
   const dispatch = useDispatch();
-  const router = useRouter();
 
   const { isActive, isTimeSet, timeLeft } = useSelector(
     (state: RootState) => state.timer
   );
 
+  const intervalRef = useRef<NodeJS.Timeout | null>(null); // Ref to store the interval
+
+  // Ensure component is only rendered on the client
+  useEffect(() => {
+    setHasMounted(true); // Set state to true after mounting
+    dispatch(resetTimer()); // Reset timer on component mount (page reload)
+  }, [dispatch]);
+
+  // Handle setting the time
   const handleSetTime = () => {
-    dispatch(setTime(inputMinutes * 60)); // Konversi ke detik
+    if (!isActive) {
+      dispatch(setTime(inputMinutes * 60)); // Convert minutes to seconds
+    }
   };
 
+  // Handle starting the timer
   const handleStart = () => {
-    dispatch(startTimer());
+    if (!isActive && isTimeSet) {
+      dispatch(startTimer());
+    }
   };
 
-  const handleReset = () => {
-    dispatch(resetTimer());
-  };
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setInputMinutes(Number(e.target.value));
+  // Clear interval to avoid duplication
+  const clearTimerInterval = () => {
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+    }
   };
 
   useEffect(() => {
-    let interval: NodeJS.Timeout;
     if (isActive && timeLeft > 0) {
-      interval = setInterval(() => {
+      clearTimerInterval(); // Ensure no duplicate interval is running
+      intervalRef.current = setInterval(() => {
         dispatch(decrementTime());
-      }, 1000);
+      }, 1000); // Decrease time every second
+    } else if (timeLeft <= 0) {
+      clearTimerInterval(); // Stop the timer when time is up
     }
 
-    return () => clearInterval(interval); // Membersihkan interval saat komponen unmount
+    // Clean up interval on component unmount
+    return () => {
+      clearTimerInterval();
+    };
   }, [isActive, timeLeft, dispatch]);
 
-  const getTimerStyle = () => {
-    if (timeLeft === 0) {
-      return { color: "white" }; // Ubah warna menjadi putih ketika timeLeft = 0
-    }
-    if (timeLeft <= 5) {
-      return { color: "red" }; // Ubah warna menjadi merah jika timeLeft <= 5 detik
-    }
-    return { color: "white" }; // Warna default
+  const handleReset = () => {
+    dispatch(resetTimer());
+    clearTimerInterval(); // Clear interval on reset
   };
 
+  const handleSelectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setInputMinutes(Number(e.target.value));
+  };
+
+  // Format time as mm:ss
   const formatTime = (): string => {
     const minutes = Math.floor(timeLeft / 60);
     const seconds = timeLeft % 60;
@@ -66,29 +83,34 @@ const CountDownPage = () => {
     return `${formattedMinutes}:${formattedSeconds}`;
   };
 
+  // Only render the component if it has mounted
+  if (!hasMounted) {
+    return null; // Return null until the component has mounted to prevent hydration error
+  }
+
   return (
     <div className="w-[300px]">
       <div
-        style={{ fontSize: "6rem", ...getTimerStyle() }}
+        style={{ fontSize: "6rem" }}
         className="flex items-center justify-center"
       >
         {formatTime()}
       </div>
 
       <div className="flex flex-col gap-2 mb-4 mt-6">
-        <label htmlFor="minutesInput">Set Minutes: </label>
+        <label htmlFor="minutesSelect">Set Minutes: </label>
         <select
-          id="minutesInput"
+          id="minutesSelect"
           value={inputMinutes}
-          onChange={handleInputChange}
+          onChange={handleSelectChange}
           disabled={isActive}
           className="border-2 border-slate-700 rounded-md p-2 text-slate-800 w-full"
         >
-          <option value={1}>1 Minute</option>
-          <option value={2}>2 Minutes</option>
-          <option value={3}>3 Minutes</option>
-          <option value={4}>4 Minutes</option>
-          <option value={5}>5 Minutes</option>
+          <option value={1}>1 minute</option>
+          <option value={2}>2 minutes</option>
+          <option value={3}>3 minutes</option>
+          <option value={4}>4 minutes</option>
+          <option value={5}>5 minutes</option>
         </select>
       </div>
 

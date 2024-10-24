@@ -3,15 +3,24 @@ import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 // Helper function to save timer state to LocalStorage
 const saveToLocalStorage = (state: TimerState) => {
   if (typeof window !== "undefined") {
-    localStorage.setItem("timerState", JSON.stringify(state));
+    try {
+      localStorage.setItem("timerState", JSON.stringify(state));
+    } catch (error) {
+      console.error("Error saving to localStorage:", error);
+    }
   }
 };
 
-// Load initial timer state from LocalStorage if it exists
+// Load initial timer state from LocalStorage
 const loadFromLocalStorage = (): TimerState | null => {
   if (typeof window !== "undefined") {
-    const savedState = localStorage.getItem("timerState");
-    return savedState ? JSON.parse(savedState) : null;
+    try {
+      const savedState = localStorage.getItem("timerState");
+      return savedState ? JSON.parse(savedState) : null;
+    } catch (error) {
+      console.error("Error loading from localStorage:", error);
+      return null;
+    }
   }
   return null;
 };
@@ -22,7 +31,8 @@ interface TimerState {
   isTimeSet: boolean;
 }
 
-const initialState: TimerState = {
+// Set the initial state either from localStorage or default values
+const initialState: TimerState = loadFromLocalStorage() || {
   timeLeft: 0,
   isActive: false,
   isTimeSet: false,
@@ -36,50 +46,27 @@ export const timerSlice = createSlice({
       state.timeLeft = action.payload;
       state.isTimeSet = true;
       state.isActive = false;
-      saveToLocalStorage(state);
+      saveToLocalStorage(state); // Save state on timer set
     },
     startTimer: (state) => {
       state.isActive = true;
-      saveToLocalStorage(state);
+      saveToLocalStorage(state); // Save state on timer start
     },
     decrementTime: (state) => {
       if (state.timeLeft > 0) {
         state.timeLeft -= 1;
-        saveToLocalStorage(state);
+      } else {
+        state.isActive = false; // Stop timer when it reaches 0
       }
     },
     resetTimer: (state) => {
       state.timeLeft = 0;
       state.isActive = false;
       state.isTimeSet = false;
-      saveToLocalStorage(state);
+      saveToLocalStorage(state); // Save state on timer reset
     },
   },
 });
-
-// export const timerSlice = createSlice({
-//   name: "timer",
-//   initialState,
-//   reducers: {
-//     setTime: (state, action: PayloadAction<number>) => {
-//       state.timeLeft = action.payload;
-//       state.isTimeSet = true;
-//     },
-//     startTimer: (state) => {
-//       state.isActive = true;
-//     },
-//     decrementTime: (state) => {
-//       if (state.timeLeft > 0) {
-//         state.timeLeft -= 1;
-//       }
-//     },
-//     resetTimer: (state) => {
-//       state.timeLeft = 0;
-//       state.isActive = false;
-//       state.isTimeSet = false;
-//     },
-//   },
-// });
 
 export const { setTime, startTimer, decrementTime, resetTimer } =
   timerSlice.actions;
