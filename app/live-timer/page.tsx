@@ -9,12 +9,16 @@ const LiveTimer: React.FC = () => {
   const dispatch = useDispatch();
   const { timeLeft, isActive } = useSelector((state: RootState) => state.timer);
 
-  const timerRef = useRef<HTMLDivElement>(null); // Reference to the timer container
-  const [isFullscreen, setIsFullscreen] = useState(false); // Track fullscreen state
-  const [color, setColor] = useState<string>("white"); // State for text color
-  const [isBlinking, setIsBlinking] = useState<boolean>(false); // State for blinking effect
+  const timerRef = useRef<HTMLDivElement>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [color, setColor] = useState<string>("white");
+  const [isBlinking, setIsBlinking] = useState<boolean>(false);
+  const [hasMounted, setHasMounted] = useState(false); // State baru untuk mendeteksi komponen sudah mount
 
-  // Sync with LocalStorage whenever another tab changes the state
+  useEffect(() => {
+    setHasMounted(true); // Tandai bahwa komponen sudah mount di client
+  }, []);
+
   useEffect(() => {
     const syncTimerWithLocalStorage = () => {
       const savedState = localStorage.getItem("timerState");
@@ -32,7 +36,6 @@ const LiveTimer: React.FC = () => {
     };
   }, [dispatch]);
 
-  // Handle decrement timer and play sound during the last 5 seconds
   useEffect(() => {
     let interval: NodeJS.Timeout;
 
@@ -48,7 +51,6 @@ const LiveTimer: React.FC = () => {
         .play()
         .catch((error) => console.log("Failed to play sound:", error));
 
-      // Start blinking effect during the last 5 seconds
       if (timeLeft === 5) {
         setIsBlinking(true);
       }
@@ -64,13 +66,12 @@ const LiveTimer: React.FC = () => {
     }
 
     if (timeLeft <= 0) {
-      setIsBlinking(false); // Stop blinking when time runs out
+      setIsBlinking(false);
     }
 
     return () => clearInterval(interval);
   }, [isActive, timeLeft, dispatch]);
 
-  // Handle blinking effect
   useEffect(() => {
     let blinkInterval: NodeJS.Timeout;
 
@@ -79,13 +80,12 @@ const LiveTimer: React.FC = () => {
         setColor((prevColor) => (prevColor === "red" ? "white" : "red"));
       }, 500);
     } else {
-      setColor("white"); // Reset to default color
+      setColor("white");
     }
 
     return () => clearInterval(blinkInterval);
   }, [isBlinking]);
 
-  // Format time as mm:ss
   const formatTime = (): string => {
     const minutes = Math.floor(timeLeft / 60);
     const seconds = timeLeft % 60;
@@ -94,7 +94,6 @@ const LiveTimer: React.FC = () => {
       .padStart(2, "0")}`;
   };
 
-  // Handle fullscreen toggle
   const handleFullscreenToggle = () => {
     if (!isFullscreen && timerRef.current) {
       if (timerRef.current.requestFullscreen) {
@@ -119,7 +118,6 @@ const LiveTimer: React.FC = () => {
     }
   };
 
-  // Listen for fullscreen changes
   useEffect(() => {
     const fullscreenChangeHandler = () => {
       setIsFullscreen(!!document.fullscreenElement);
@@ -155,12 +153,15 @@ const LiveTimer: React.FC = () => {
       ref={timerRef}
       className="flex flex-col h-screen items-center justify-center"
     >
-      <div style={{ fontSize: "25rem", color }}>{formatTime()}</div>
+      {/* Hanya render timeLeft setelah komponen ter-mount */}
+      <div style={{ fontSize: "25rem", color }}>
+        {hasMounted ? formatTime() : "Loading..."}
+      </div>
       <button
         onClick={handleFullscreenToggle}
         style={{
           position: "absolute",
-          top: "10px",
+          top: "60px",
           right: "10px",
           padding: "10px",
           color: "#fff",
@@ -170,7 +171,7 @@ const LiveTimer: React.FC = () => {
         }}
       >
         {isFullscreen ? (
-          <IconArrowsMinimize size={12} className="text-slate-700" />
+          <IconArrowsMinimize size={14} className="text-slate-700" />
         ) : (
           <IconArrowsMaximize size={16} className="text-slate-400" />
         )}
